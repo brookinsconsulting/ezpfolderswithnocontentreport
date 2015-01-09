@@ -1,0 +1,5 @@
+eZp Folders With No Content Report script FAQ
+
+- Remember to set report storage directory permissions before attempting to create / generate / regenerate report
+
+- All major functionality currently exists in report generation script

@@ -1,0 +1,145 @@
+eZp Folders With No Content Report README
+
+What is the eZp Folders With No Content Report extension?
+================================
+
+eZp Folders With No Content Report is a true eZ Publish extension
+that provides commandline script to find folder objects with
+no description content and generate a csv report.
+
+
+eZp Folders With No Content Report version
+=======================
+
+The current version of eZp Folders With No Content Report is 0.1.1
+Last Major update: January 9, 2015
+
+
+Copyright
+=========
+
+eZp Folders With No Content Report is copyright 1999 - 2015 Brookins Consulting and Think Creative
+
+See: doc/COPYRIGHT for more information on the terms of the copyright and license
+
+
+License
+=======
+
+eZp Folders With No Content Report is licensed under the GNU General Public License.
+
+The complete license agreement is included in the doc/LICENSE file.
+
+eZp Folders With No Content Report is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+eZp Folders With No Content Report is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+The GNU GPL gives you the right to use, modify and redistribute
+eZp Folders With No Content Report under certain conditions. The GNU GPL license
+is distributed with the software, see the file doc/LICENSE.
+
+It is also available at http://www.gnu.org/licenses/gpl.txt
+
+You should have received a copy of the GNU General Public License
+along with eZp Folders With No Content Report in doc/LICENSE.  If not, see http://www.gnu.org/licenses/.
+
+Using eZp Folders With No Content Report under the terms of the GNU GPL is free (as in freedom).
+
+For more information or questions please contact
+license@brookinsconsulting.com
+
+
+Requirements
+============
+
+The following requirements exists for using eZp Folders With No Content Report extension:
+
+o  eZ Publish version:
+
+   Make sure you use eZ Publish version 4.x (required) or higher. eZ Publish 4.6.x+ (Community Build, 2011.11+) is recommended.
+
+o  PHP version:
+
+   Make sure you have PHP 5.x or higher.
+
+
+Usage - Command line script
+============
+
+# Change directory into eZ Publish website document root:
+cd path/to/ezpublish/docroot;
+
+# Create directory for report to be stored after generation
+mkdir var/foldersWithNoContentCsvReport;
+
+# Assign proper permissions for report directory to be stored after generation
+sudo chmod -R 777 var/foldersWithNoContentCsvReport;
+sudo chown -R _www:_www var/foldersWithNoContentCsvReport;
+
+# Run the script to generate the report
+php ./extension/ezpezpliteralobjectsreport/bin/php/ezpezpliteralobjectsreport.php
+--storage-dir=var/foldersWithNoContentCsvReport --hostname=www.example.com
+
+# Review generated report in open office as a spreadsheet:
+less var/foldersWithNoContentCsvReport/ezpezpliteralobjectsreport.csv
+
+
+Usage - Cronjob
+============
+
+# Change directory into eZ Publish website document root:
+cd path/to/ezpublish/docroot;
+
+# Create settings override
+cp -va extension/ezpliteralobjectsreport/settings/ezpliteralobjectsreport.ini.append.php settings/override/ezpliteralobjectsreport.ini.append.php
+
+# Populate ini settings: SiteHostname and ReportStoragePath
+emacs settings/override/ezpliteralobjectsreport.ini.append.php
+
+# Create directory for report to be stored after generation
+mkdir var/foldersWithNoContentCsvReport;
+
+# Assign proper permissions for report directory to be stored after generation
+sudo chmod -R 777 var/foldersWithNoContentCsvReport;
+sudo chown -R _www:_www var/foldersWithNoContentCsvReport;
+
+# Run the cronjob manually to generate the report
+php ./runcronjobs.php ezpliteralobjectsreportgenerate
+
+# Review generated report in open office as a spreadsheet:
+less var/foldersWithNoContentCsvReport/ezpezpliteralobjectsreport.csv
+
+
+Usage - Module
+============
+
+# The module view is optional
+
+# The module view can be used for simple regeneration of report and downloading of report
+
+# Access the module view using the following uri
+
+http://admin.example.com/folderswithnocontentreport/report
+
+
+Troubleshooting
+===============
+
+1. Read the FAQ
+   ------------
+
+   Some problems are more common than others. The most common ones
+   are listed in the the doc/FAQ.
+
+2. Support
+   -------
+
+   If you have find any problems not handled by this document or the FAQ you
+   can contact Brookins Consulting through the support system:
+   http://brookinsconsulting.com/contact
