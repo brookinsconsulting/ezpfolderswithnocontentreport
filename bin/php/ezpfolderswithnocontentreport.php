@@ -166,6 +166,11 @@ while ( list( $key, $contentObject ) = each( $results ) )
     $objectName = $object->name();
     $objectMainNode = $object->mainNode();
 
+    if( $object->attribute('current_version') != $contentObject['version'] )
+    {
+        continue;
+    }
+
     if ( is_object( $objectMainNode ) )
     {
         $objectMainNodeID = $objectMainNode->attribute( 'node_id' );
