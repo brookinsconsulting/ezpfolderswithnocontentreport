@@ -4,4 +4,7 @@
 SiteHostname=admin.example.com
 ReportStoragePath=var/foldersWithNoContentCsvReport
 
+ExcludedParentNodeIDs[]
+#ExcludedParentNodeIDs[]=43
+
 */ ?>

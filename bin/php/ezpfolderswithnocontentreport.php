@@ -3,10 +3,10 @@
 /**
  * File containing the ezpfolderswithnocontentreport.php bin script
  *
- * @copyright Copyright (C) 1999 - 2015 Brookins Consulting. All rights reserved.
- * @copyright Copyright (C) 2013 - 2015 Think Creative. All rights reserved.
+ * @copyright Copyright (C) 1999 - 2016 Brookins Consulting. All rights reserved.
+ * @copyright Copyright (C) 2013 - 2016 Think Creative. All rights reserved.
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2 (or later)
- * @version 0.1.1
+ * @version 0.1.2
  * @package ezpfolderswithnocontentreport
  */
 
@@ -21,7 +21,7 @@ ini_set("memory_limit", -1);
 $cli = eZCLI::instance();
 $script = eZScript::instance( array( 'description' => ( "eZ Publish Folders With No Content CSV Report Script\n" .
                                                         "\n" .
-                                                        "ezpfolderswithnocontentreport.php --storage-dir=var/foldersWithNoContentCsvReport --hostname=www.example.com" ),
+                                                        "ezpfolderswithnocontentreport.php --storage-dir=var/foldersWithNoContentCsvReport --hostname=www.example.com --exclude-node-ids=43,1999,2001" ),
                                      'use-session' => false,
                                      'use-modules' => true,
                                      'use-extensions' => true,
@@ -29,13 +29,19 @@ $script = eZScript::instance( array( 'description' => ( "eZ Publish Folders With
 
 $script->startup();
 
-$options = $script->getOptions( "[storage-dir:][hostname:]",
+$options = $script->getOptions( "[storage-dir:][hostname:][exclude-node-ids:]",
                                 "[node]",
                                 array( 'storage-dir' => 'Directory to place exported report file in',
-                                       'hostname' => 'Website hostname to match url searches for' ),
+                                       'hostname' => 'Website hostname to match url searches for',
+                                       'exclude-node-ids' => 'Comma separted list of nodeID content tree nodeID paths to exclude from report. This parameter overrides defeault ini settings when used.' ),
                                 false,
                                 array( 'user' => true ) );
 $script->initialize();
+
+
+/** Access ini variables **/
+$ini = eZINI::instance();
+$iniFoldersWithNoContentReport = eZINI::instance( 'ezpfolderswithnocontentreport.ini' );
 
 /** Script default values **/
 
@@ -46,6 +52,8 @@ $orphanedCsvReportFileName = 'ezpfolderswithnocontentreport';
 $csvHeader = array( 'ContentObjectID', 'NodeID', 'AttributeID', 'Attribute Identifier', 'Attribute Name', 'Version', 'Content Empty', 'Node Name', 'Node Url' );
 
 $siteNodeUrlPrefix = "http://";
+
+$excludeParentNodeIDs = $iniFoldersWithNoContentReport->variable( 'SiteSettings', 'ExcludedParentNodeIDs' );
 
 /** Test for required script arguments **/
 
@@ -68,6 +76,10 @@ else
     $script->shutdown( 2 );
 }
 
+if ( isset( $options['exclude-node-ids'] ) )
+{
+    $excludeParentNodeIDs = explode( ',', $options['exclude-node-ids'] );
+}
 
 /** Alert user of report generation process starting **/
 
@@ -149,6 +161,7 @@ while ( list( $key, $contentObject ) = each( $results ) )
 {
     $objectData = array();
     $estimateObjectOrphaned = 0;
+    $excludeObjectMainNode = false;
     $status = true;
 
     /** Fetch object details **/
@@ -166,13 +179,29 @@ while ( list( $key, $contentObject ) = each( $results ) )
     $objectName = $object->name();
     $objectMainNode = $object->mainNode();
 
-    if( $object->attribute('current_version') != $contentObject['version'] )
+    if( $object->attribute( 'current_version' ) != $contentObject['version'] )
     {
         continue;
     }
 
     if ( is_object( $objectMainNode ) )
     {
+        /** Test if content object tree node id exists within excluded parent node ids content tree node id path **/
+        foreach( $excludeParentNodeIDs as $excludeParentNodeID )
+        {
+            if( strpos( $objectMainNode->attribute( 'path_string' ), '/' . $excludeParentNodeID . '/' ) !== false )
+            {
+                // print_r( $objectMainNode->attribute( 'path_string' ) ); echo "\n\n";
+                $excludeObjectMainNode = true;
+            }
+        }
+
+        /** Exclude matches from the report **/
+        if( $excludeObjectMainNode == true )
+        {
+            continue;
+        }
+
         $objectMainNodeID = $objectMainNode->attribute( 'node_id' );
         $objectMainNodePath = $siteNodeUrlPrefix . $siteNodeUrlHostname . '/' . $objectMainNode->attribute( 'url' );
 
