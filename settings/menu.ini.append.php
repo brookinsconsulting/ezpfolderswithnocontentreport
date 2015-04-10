@@ -1,5 +1,6 @@
 <?php /* #?ini charset="utf8"?
 
+[NavigationPart]
 Part[ezfolderswithnocontentreportnavigationpart]=Folder Report
 
 [TopAdminMenu]
