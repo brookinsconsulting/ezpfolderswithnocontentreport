@@ -6,7 +6,7 @@
  * @copyright Copyright (C) 1999 - 2016 Brookins Consulting. All rights reserved.
  * @copyright Copyright (C) 2013 - 2016 Think Creative. All rights reserved.
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2 (or later)
- * @version 0.1.2
+ * @version 0.1.3
  * @package ezpfolderswithnocontentreport
  */
 
@@ -49,11 +49,15 @@ $openedFPs = array();
 
 $orphanedCsvReportFileName = 'ezpfolderswithnocontentreport';
 
-$csvHeader = array( 'ContentObjectID', 'NodeID', 'AttributeID', 'Attribute Identifier', 'Attribute Name', 'Version', 'Content Empty', 'Node Name', 'Node Url' );
+$csvHeader = array( 'ContentObjectID', 'NodeID', 'AttributeID', 'Attribute Identifier', 'Attribute Name', 'Version', 'Content Empty', 'Visibility', 'Node Name', 'Node Url' );
 
-$siteNodeUrlPrefix = "http://";
+$siteNodeUrlPrefix = $iniFoldersWithNoContentReport->variable( 'eZpFoldersWithNoContentReportSettings', 'NodeUrlProtocolPrefix' );
 
-$excludeParentNodeIDs = $iniFoldersWithNoContentReport->variable( 'SiteSettings', 'ExcludedParentNodeIDs' );
+$excludeParentNodeIDs = $iniFoldersWithNoContentReport->variable( 'eZpFoldersWithNoContentReportSettings', 'ExcludedParentNodeIDs' );
+
+$excludeObjectsWithAttributeShowChildrenChecked = $iniFoldersWithNoContentReport->variable( 'eZpFoldersWithNoContentReportSettings', 'ExcludeObjectsWithAttributeShowChildrenChecked' ) == 'enabled' ? true : false;
+
+$excludeObjectsWithParentObjectPathTreeObjectsWithAttributeShowChildrenChecked = $iniFoldersWithNoContentReport->variable( 'eZpFoldersWithNoContentReportSettings', 'ExcludeObjectsWithParentObjectPathTreeObjectsWithAttributeShowChildrenChecked' ) == 'enabled' ? true : false;
 
 /** Test for required script arguments **/
 
@@ -162,6 +166,7 @@ while ( list( $key, $contentObject ) = each( $results ) )
     $objectData = array();
     $estimateObjectOrphaned = 0;
     $excludeObjectMainNode = false;
+    $excludeObjectWithAttributeShowChildrenChecked = false;
     $status = true;
 
     /** Fetch object details **/
@@ -178,20 +183,28 @@ while ( list( $key, $contentObject ) = each( $results ) )
     $object = eZContentObject::fetch( $contentObjectID );
     $objectName = $object->name();
     $objectMainNode = $object->mainNode();
+    $objectDataMap = $object->dataMap();
 
     if( $object->attribute( 'current_version' ) != $contentObject['version'] )
     {
         continue;
     }
 
+    if( $excludeObjectsWithAttributeShowChildrenChecked && isset( $objectDataMap['show_children'] ) && $objectDataMap['show_children']->attribute( 'content' ) == 1 )
+    {
+        continue;
+    }
+
     if ( is_object( $objectMainNode ) )
     {
+        $objectMainNodeVisibility = $objectMainNode->attribute( 'is_hidden' );
+        $objectMainNodeParentVisibility = $objectMainNode->attribute( 'is_invisible' );
+
         /** Test if content object tree node id exists within excluded parent node ids content tree node id path **/
         foreach( $excludeParentNodeIDs as $excludeParentNodeID )
         {
             if( strpos( $objectMainNode->attribute( 'path_string' ), '/' . $excludeParentNodeID . '/' ) !== false )
             {
-                // print_r( $objectMainNode->attribute( 'path_string' ) ); echo "\n\n";
                 $excludeObjectMainNode = true;
             }
         }
@@ -200,6 +213,38 @@ while ( list( $key, $contentObject ) = each( $results ) )
         if( $excludeObjectMainNode == true )
         {
             continue;
+        }
+
+        if( $excludeObjectsWithParentObjectPathTreeObjectsWithAttributeShowChildrenChecked == true && $excludeObjectMainNode == false )
+        {
+            $objectMainNodePathStringArray = explode( '/', $objectMainNode->attribute( 'path_string' ) );
+            array_pop( $objectMainNodePathStringArray );
+            array_pop( $objectMainNodePathStringArray );
+
+            if( count( $objectMainNodePathStringArray ) >= 4 )
+            {
+                $objectMainNodePathStringArray = array_slice( $objectMainNodePathStringArray, 3 );
+            }
+
+            $objectMainNodePathStringArray = array_reverse( $objectMainNodePathStringArray );
+
+            /** Test if content object tree path nodes (in reverse) data_map contains show_children attribute checked **/
+            foreach( $objectMainNodePathStringArray as $parentNodeID )
+            {
+                $parentNode = eZContentObjectTreeNode::fetch( $parentNodeID );
+                $parentNodeDataMap = $parentNode->dataMap();
+
+                if( isset( $parentNodeDataMap['show_children'] ) && $parentNodeDataMap['show_children']->attribute( 'content' ) == 1 )
+                {
+                    $excludeObjectWithAttributeShowChildrenChecked = true;
+                }
+            }
+
+            /** Exclude matches from the report **/
+            if( $excludeObjectWithAttributeShowChildrenChecked == true )
+            {
+                continue;
+            }
         }
 
         $objectMainNodeID = $objectMainNode->attribute( 'node_id' );
@@ -221,6 +266,19 @@ while ( list( $key, $contentObject ) = each( $results ) )
 
         $objectData[] = $objectAttributeWithNoContent;
 
+        if( $objectMainNodeVisibility == 1 )
+        {
+            $objectData[] = 'Hidden';
+        }
+        elseif( $objectMainNodeParentVisibility == 1 )
+        {
+            $objectData[] = 'Hidden By Parent';
+        }
+        else
+        {
+            $objectData[] = 'Visible';
+        }
+
         $objectData[] = $objectName;
 
         $objectData[] = $objectMainNodePath;
@@ -233,7 +291,7 @@ while ( list( $key, $contentObject ) = each( $results ) )
             $script->shutdown( 5 );
         }
 
-        /** Write report datat to file **/
+        /** Write iteration report data to file **/
 
         if ( !fputcsv( $fp, $objectData, ';' ) )
         {
@@ -255,6 +313,10 @@ while ( $fp = each( $openedFPs ) )
 /** Assign permissions to report file **/
 
 chmod( $fileName, 0777);
+
+/** Alert the user to the completion of the report generation **/
+
+$cli->output( "\n\nReport generation complete! Please review the report content written to disk: $fileName\n" );
 
 /** Shutdown script **/
 
